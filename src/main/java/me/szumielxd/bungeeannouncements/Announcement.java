@@ -5,12 +5,16 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 
 public class Announcement implements Runnable {
@@ -22,7 +26,7 @@ public class Announcement implements Runnable {
 	private final List<Component> legacyMessages = new ArrayList<>();
 	private final List<String> serverList;
 	private final boolean blacklist;
-	private int counter = 0;
+	private int counter = -1;
 	
 	
 	public Announcement(BungeeAnnouncements plugin, String id, SerializableAnnouncement announcement) {
@@ -38,14 +42,14 @@ public class Announcement implements Runnable {
 			i++;
 			try {
 				// JSON
-				this.messages.add(GsonComponentSerializer.gson().deserialize(msg));
+				this.messages.add(GsonComponentSerializer.gson().deserializeFromTree(new Gson().fromJson(msg, JsonObject.class)));
 			} catch (Exception e) {
 				Component comp = MiniMessage.get().deserialize(msg);
 				String str = altSerializer.serialize(comp);
 				// MiniMessage
 				if (!str.equalsIgnoreCase(msg.replace("\\n", "\n"))) this.messages.add(comp);
 				// Legacy
-				else this.messages.add(altSerializer.deserializeOr(msg.replace("\\n", "\n"), Component.text("INVALID("+i+")").color(NamedTextColor.RED)));
+				else this.messages.add(altSerializer.deserializeOr(ChatColor.translateAlternateColorCodes('&', msg).replace("\\n", "\n"), Component.text("INVALID("+i+")").color(NamedTextColor.RED)));
 			}
 		}
 		i = 0;
@@ -53,14 +57,14 @@ public class Announcement implements Runnable {
 			i++;
 			try {
 				// JSON
-				this.legacyMessages.add(GsonComponentSerializer.colorDownsamplingGson().deserialize(msg));
+				this.legacyMessages.add(GsonComponentSerializer.colorDownsamplingGson().deserializeFromTree(new Gson().fromJson(msg, JsonObject.class)));
 			} catch (Exception e) {
 				Component comp = MiniMessage.get().deserialize(msg);
 				String str = altSerializer.serialize(comp);
 				// MiniMessage
 				if (!str.equalsIgnoreCase(msg.replace("\\n", "\n"))) this.legacyMessages.add(comp);
 				// Legacy
-				else this.legacyMessages.add(altLegacySerializer.deserializeOr(msg.replace("\\n", "\n"), Component.text("INVALID("+i+")").color(NamedTextColor.RED)));
+				else this.legacyMessages.add(altLegacySerializer.deserializeOr(ChatColor.translateAlternateColorCodes('&', msg).replace("\\n", "\n"), Component.text("INVALID("+i+")").color(NamedTextColor.RED)));
 			}
 		}
 	}
@@ -70,8 +74,8 @@ public class Announcement implements Runnable {
 	public void run() {
 		Collection<ProxiedPlayer> players = this.plugin.getProxy().getPlayers();
 		this.counter++;
-		if (this.counter >= messages.size() || this.counter >= this.legacyMessages.size()) this.counter = 0;
-		if (players.isEmpty()) return;
+		if (this.counter >= this.messages.size() || this.counter >= this.legacyMessages.size()) this.counter = 0;
+		if (players.isEmpty() || this.messages.isEmpty() || this.legacyMessages.isEmpty()) return;
 		for (ProxiedPlayer player : players) {
 			if (player.getServer() == null) return;
 			if (this.blacklist != this.serverList.contains(player.getServer().getInfo().getName().toLowerCase())) {
