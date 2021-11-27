@@ -59,7 +59,7 @@ public class Announcement implements Runnable {
 				// JSON
 				this.legacyMessages.add(GsonComponentSerializer.colorDownsamplingGson().deserializeFromTree(new Gson().fromJson(msg, JsonObject.class)));
 			} catch (Exception e) {
-				Component comp = MiniMessage.get().deserialize(msg);
+				Component comp = this.downsampleComponent(MiniMessage.get().deserialize(msg));
 				String str = altSerializer.serialize(comp);
 				// MiniMessage
 				if (!str.equalsIgnoreCase(msg.replace("\\n", "\n"))) this.legacyMessages.add(comp);
@@ -115,5 +115,26 @@ public class Announcement implements Runnable {
 		if (c >= messages.size() || c >= this.legacyMessages.size()) c = 0;
 		return new Component[] { this.messages.get(c), this.legacyMessages.get(c) };
 	}
+	
+	
+	private Component downsampleComponent(Component comp) {
+		
+		// self
+		if (comp.color() != null && !(comp.color() instanceof NamedTextColor)) {
+			comp = comp.color(NamedTextColor.nearestTo(comp.color()));
+		}
+		
+		// children
+		if (!comp.children().isEmpty()) {
+			comp = comp.children(comp.children().stream().map(this::downsampleComponent).collect(Collectors.toList()));
+		}
+		
+		// hover
+		if (comp.hoverEvent() != null && comp.hoverEvent().value() instanceof Component) {
+			comp = comp.hoverEvent(this.downsampleComponent((Component) comp.hoverEvent().value()));
+		}
+		return comp;
+	}
+	
 
 }

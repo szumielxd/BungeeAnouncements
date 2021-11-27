@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>me.szumielxd</groupId>
 	<artifactId>SZBungeeAnnouncements</artifactId>
-	<version>1.0.2</version>
+	<version>1.0.3</version>
 	<name>SZBungeeAnnouncements</name>
 	<description>Auto message system for bungeecord</description>
 	<properties>
